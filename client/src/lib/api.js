@@ -1,7 +1,14 @@
 import axios from 'axios'
 
+const configuredApiUrl = import.meta.env.VITE_API_URL
+const localApiUrl = /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?(?:\/|$)/
+const productionApiUrl = 'https://pharmacare-pharmacy-management-system-4tou.onrender.com/api'
+const baseURL = import.meta.env.PROD && (!configuredApiUrl || localApiUrl.test(configuredApiUrl))
+  ? productionApiUrl
+  : configuredApiUrl || 'http://localhost:5001/api'
+
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5001/api',
+  baseURL,
   timeout: 15000,
 })
 

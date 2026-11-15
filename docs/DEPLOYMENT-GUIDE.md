@@ -1,8 +1,9 @@
 # PharmaCare Deployment Guide
 
-This guide documents commands provided by the repository and a deployment
-shape compatible with the current client/server architecture. No production
-deployment configuration or live deployment is included in the repository.
+This guide documents commands provided by the repository and the supplied
+frontend and backend deployment URLs. The live health endpoint and frontend
+CORS preflight were checked during documentation; this does not verify every
+authenticated workflow.
 Provider dashboards, plan availability, quotas, and pricing change; confirm
 current provider terms before selecting a free tier.
 
@@ -80,7 +81,7 @@ Vite client variables are embedded at build time and must not contain secrets.
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `VITE_API_URL` | `http://localhost:5001/api` | Public URL of the deployed API including `/api` |
+| `VITE_API_URL` | Development: `http://localhost:5001/api`; production fallback: `https://pharmacare-pharmacy-management-system-4tou.onrender.com/api` | Public URL of the deployed API including `/api`; set this in Vercel if overriding the production fallback |
 | `VITE_CURRENCY` | `USD` | Currency code used by the UI formatter |
 
 Set production values before running the frontend build. Changing them after
@@ -145,6 +146,15 @@ npm run build --prefix client
 
 ## 7. Build the frontend
 
+The project deployment uses:
+
+- Frontend: `https://pharma-care-pharmacy-management-sys-lemon.vercel.app/`
+- Backend API base: `https://pharmacare-pharmacy-management-system-4tou.onrender.com/api`
+
+In production, the client uses that backend API base if `VITE_API_URL` is
+unset or is set to a localhost URL. Set any non-local Vercel `VITE_API_URL` to
+the URL above. Development continues to default to the local API.
+
 ```sh
 npm run build --prefix client
 ```
@@ -172,17 +182,35 @@ adapter, Dockerfile, process manager configuration, or deployment manifest.
 
 ## 9. Production CORS configuration
 
-Set `CLIENT_ORIGIN` to the browser-visible frontend origin, including scheme
-and host but without an API path, for example:
+The project frontend deployment URL:
 
 ```text
-CLIENT_ORIGIN=https://pharmacare.example-host.app
+https://pharma-care-pharmacy-management-sys-lemon.vercel.app/
+```
+
+The project backend deployment URL:
+
+```text
+https://pharmacare-pharmacy-management-system-4tou.onrender.com/
+```
+
+Set the backend's `CLIENT_ORIGIN` to the frontend origin (scheme and host,
+without a trailing slash or API path):
+
+```text
+CLIENT_ORIGIN=https://pharma-care-pharmacy-management-sys-lemon.vercel.app
 ```
 
 The server allows this exact configured origin. In non-production mode it
 also allows the built-in Vite localhost origins. Production should use HTTPS
 and the exact deployed client origin. Do not use wildcard origins with
 authenticated requests.
+
+If Vercel has `VITE_API_URL` configured to a non-local value, set it to
+`https://pharmacare-pharmacy-management-system-4tou.onrender.com/api`. The
+current backend preflight check accepts the configured Vercel origin. Its
+health endpoint reported HTTP 200 and a connected database when checked;
+authenticated workflows still need end-to-end verification.
 
 ## 10. Suggested free-tier topology
 

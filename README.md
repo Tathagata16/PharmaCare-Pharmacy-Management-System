@@ -443,7 +443,7 @@ Copy [`client/.env.example`](./client/.env.example) to `client/.env`.
 
 | Variable | Required | Default / example | Description |
 | --- | --- | --- | --- |
-| `VITE_API_URL` | No | `http://localhost:5001/api` | API base URL used by the browser client |
+| `VITE_API_URL` | No | Development: `http://localhost:5001/api`; production: the Render API URL in the Deployment section | API base URL used by the browser client; override when using a different backend |
 | `VITE_CURRENCY` | No | `USD` | ISO 4217 currency code used to format displayed prices and totals |
 
 Vite embeds `VITE_*` values into the browser build. Never place secrets,
@@ -577,9 +577,19 @@ through the app, or create the first administrator using the
 
 ## Deployment
 
-No hosting provider configuration, deployment workflow, container definition,
-or production URL is included in this repository. A production deployment is
-therefore **not preconfigured or verified**.
+The project owner provided this deployed frontend URL:
+
+[https://pharma-care-pharmacy-management-sys-lemon.vercel.app/](https://pharma-care-pharmacy-management-sys-lemon.vercel.app/)
+
+The backend URL provided by the project owner is:
+
+[https://pharmacare-pharmacy-management-system-4tou.onrender.com/](https://pharmacare-pharmacy-management-system-4tou.onrender.com/)
+
+The frontend uses `https://pharmacare-pharmacy-management-system-4tou.onrender.com/api`
+in production when `VITE_API_URL` is unset or points to localhost; this avoids
+shipping a browser build that calls the developer's own machine. Its
+development default remains `http://localhost:5001/api`. The live backend
+health endpoint responded with HTTP 200 and reported the database connected.
 
 The client has a production build command and local preview command:
 
@@ -594,14 +604,20 @@ The backend has a start command:
 npm start --prefix server
 ```
 
-For a real deployment, the operator must choose and configure hosting for both
-apps, provide the environment variables through a secrets manager, set
-`VITE_API_URL` at client build time, set `CLIENT_ORIGIN` to the actual frontend
-origin, configure HTTPS and CORS, use a protected MongoDB replica-set/Atlas
-deployment, restrict database network access, and establish backups and
-monitoring. **TODO:** Select hosting providers and document/verify provider-
-specific deployment steps and a production URL before claiming deployment
-support.
+There is no backend build script in `server/package.json`; this Node.js
+backend runs directly from source. For a typical Node service, use:
+
+```text
+Build command: (leave blank / not required)
+Start command: npm start --prefix server
+```
+
+For deployment changes, ensure any non-local Vercel `VITE_API_URL` points to
+`https://pharmacare-pharmacy-management-system-4tou.onrender.com/api`, and
+ensure Render's `CLIENT_ORIGIN` is
+`https://pharma-care-pharmacy-management-sys-lemon.vercel.app`. Configure
+secrets, HTTPS, a protected MongoDB replica-set/Atlas deployment, database
+network restrictions, backups, and monitoring through the providers.
 
 ## Known limitations
 
@@ -618,10 +634,9 @@ support.
 - Authentication rate limiting is in memory and does not coordinate across
   multiple backend instances.
 - Transaction-dependent operations require a MongoDB replica set or `mongos`.
-- Production deployment, live credentials, backups, monitoring, and release
+- Backend deployment, live credentials, backups, monitoring, and release
   operations remain to be configured and tested.
-- Screenshots, public demo credentials, author metadata, and a production
-  deployment URL are not included.
+- Screenshots, public demo credentials, and author metadata are not included.
 
 ## AI tools and attribution
 
