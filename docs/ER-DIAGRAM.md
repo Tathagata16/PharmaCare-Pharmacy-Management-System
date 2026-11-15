@@ -129,7 +129,7 @@ erDiagram
         Number newQuantity
         String reason
         Object reference_polymorphic
-        ObjectId performedBy FK_optional
+        ObjectId performedBy FK
         Date timestamp
     }
 
@@ -138,7 +138,7 @@ erDiagram
         ObjectId performedBy FK
         String action
         String entityType
-        ObjectId entityId FK_polymorphic
+        ObjectId entityId FK
         Mixed details
         Date timestamp
     }
@@ -166,9 +166,10 @@ erDiagram
 - `PK` is Mongoose's implicit document `_id` ObjectId. Mongoose also adds
   `__v` to models unless disabled; `StockMovement` and `AuditLog` explicitly
   disable the version key.
-- `FK` denotes a schema field typed as ObjectId and configured with Mongoose
-  `ref`. It is an application-level reference, not a MongoDB-enforced foreign
-  key.
+- `FK` denotes an ObjectId application-level reference configured with
+  Mongoose `ref` or `refPath`; MongoDB does not enforce it as a foreign key.
+  `StockMovement.performedBy` is optional, while `StockMovement.reference` and
+  `AuditLog.entityId` are polymorphic (`refPath`) references.
 - `UK` denotes an explicit unique index or a unique single-field index.
 - `items_embedded` denotes an array stored inside its parent document. The
   purchase, sale, and return item schemas set `_id: false`; they are not
