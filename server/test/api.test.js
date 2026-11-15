@@ -45,6 +45,28 @@ test('unknown routes use the centralized not-found response', async () => {
   assert.deepEqual(await response.json(), { error: 'Route not found' })
 })
 
+test('development CORS accepts localhost and loopback Vite origins only', async () => {
+  const allowed = await fetch(`${baseUrl}/api/auth/register`, {
+    method: 'OPTIONS',
+    headers: {
+      Origin: 'http://127.0.0.1:5173',
+      'Access-Control-Request-Method': 'POST',
+      'Access-Control-Request-Headers': 'content-type',
+    },
+  })
+  const rejected = await fetch(`${baseUrl}/api/auth/register`, {
+    method: 'OPTIONS',
+    headers: {
+      Origin: 'https://untrusted.example',
+      'Access-Control-Request-Method': 'POST',
+      'Access-Control-Request-Headers': 'content-type',
+    },
+  })
+
+  assert.equal(allowed.headers.get('access-control-allow-origin'), 'http://127.0.0.1:5173')
+  assert.equal(rejected.headers.get('access-control-allow-origin'), null)
+})
+
 test('medicine and category APIs require authentication', async () => {
   const responses = await Promise.all([
     fetch(`${baseUrl}/api/medicines`),

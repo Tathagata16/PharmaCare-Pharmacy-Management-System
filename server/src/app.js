@@ -23,7 +23,18 @@ const app = express()
 
 app.disable('x-powered-by')
 app.use(helmet())
-app.use(cors({ origin: env.clientOrigin }))
+app.use(cors({
+  origin(origin, callback) {
+    const developmentOrigins = [
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
+    ]
+    const allowed = !origin ||
+      origin === env.clientOrigin ||
+      (env.nodeEnv !== 'production' && developmentOrigins.includes(origin))
+    callback(null, allowed)
+  },
+}))
 app.use(express.json({ limit: '10kb' }))
 app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'))
 
