@@ -8,6 +8,7 @@ const entityTypes = [
   'Supplier',
   'Batch',
   'Purchase',
+  'Return',
   'Sale',
   'StockMovement',
 ]

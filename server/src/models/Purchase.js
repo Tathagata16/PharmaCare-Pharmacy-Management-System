@@ -7,10 +7,12 @@ const purchaseItemSchema = new mongoose.Schema(
       ref: 'Medicine',
       required: true,
     },
-    batch: { type: mongoose.Schema.Types.ObjectId, ref: 'Batch' },
+    batch: { type: mongoose.Schema.Types.ObjectId, ref: 'Batch', required: true },
     batchNumber: { type: String, required: true, trim: true, maxlength: 100 },
     quantity: { type: Number, required: true, min: 1, validate: Number.isInteger },
     unitPrice: { type: Number, required: true, min: 0 },
+    sellingPrice: { type: Number, required: true, min: 0 },
+    expiryDate: { type: Date, required: true },
     lineTotal: { type: Number, required: true, min: 0 },
   },
   { _id: false },
@@ -31,6 +33,11 @@ const purchaseSchema = new mongoose.Schema(
     },
     items: { type: [purchaseItemSchema], required: true, validate: hasItems },
     totalAmount: { type: Number, required: true, min: 0 },
+    processedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
     purchaseDate: { type: Date, required: true, default: Date.now },
     status: {
       type: String,
@@ -42,7 +49,7 @@ const purchaseSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
-purchaseSchema.index({ supplier: 1, invoiceNumber: 1 }, { unique: true })
+purchaseSchema.index({ invoiceNumber: 1 }, { unique: true })
 purchaseSchema.index({ purchaseDate: -1 })
 
 function hasItems(items) {

@@ -6,6 +6,7 @@ import {
   Category,
   Medicine,
   Purchase,
+  Return,
   Sale,
   StockMovement,
   Supplier,
@@ -16,7 +17,7 @@ const objectId = () => '507f1f77bcf86cd799439011'
 
 test('all requested Mongoose models are registered and exported', () => {
   assert.deepEqual(
-    [User, Category, Medicine, Supplier, Batch, Purchase, Sale, StockMovement, AuditLog]
+    [User, Category, Medicine, Supplier, Batch, Purchase, Return, Sale, StockMovement, AuditLog]
       .map((model) => model.modelName)
       .sort(),
     [
@@ -25,6 +26,7 @@ test('all requested Mongoose models are registered and exported', () => {
       'Category',
       'Medicine',
       'Purchase',
+      'Return',
       'Sale',
       'StockMovement',
       'Supplier',

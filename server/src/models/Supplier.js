@@ -12,8 +12,18 @@ const supplierSchema = new mongoose.Schema(
       default: '',
       match: /^$|^[^\s@]+@[^\s@]+\.[^\s@]+$/,
     },
-    phone: { type: String, trim: true, maxlength: 40, default: '' },
+    phone: {
+      type: String,
+      trim: true,
+      maxlength: 40,
+      default: '',
+      validate: {
+        validator: (value) => !value || /^\+?[\d\s().-]{7,40}$/.test(value),
+        message: 'phone must contain a valid phone number',
+      },
+    },
     address: { type: String, trim: true, maxlength: 500, default: '' },
+    isActive: { type: Boolean, default: true, required: true },
   },
   { timestamps: true },
 )

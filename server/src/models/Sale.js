@@ -17,6 +17,7 @@ const saleItemSchema = new mongoose.Schema(
     brand: { type: String, trim: true, maxlength: 120, default: '' },
     batchNumber: { type: String, required: true, trim: true, maxlength: 100 },
     quantity: { type: Number, required: true, min: 1, validate: Number.isInteger },
+    returnedQuantity: { type: Number, required: true, min: 0, default: 0, validate: Number.isInteger },
     unitPrice: { type: Number, required: true, min: 0 },
     lineTotal: { type: Number, required: true, min: 0 },
   },
@@ -34,8 +35,12 @@ const saleSchema = new mongoose.Schema(
     items: { type: [saleItemSchema], required: true, validate: hasItems },
     subtotal: { type: Number, required: true, min: 0 },
     tax: { type: Number, required: true, min: 0, default: 0 },
+    taxRate: { type: Number, required: true, min: 0, max: 1, default: 0 },
     discount: { type: Number, required: true, min: 0, default: 0 },
     totalAmount: { type: Number, required: true, min: 0 },
+    pharmacyName: { type: String, required: true, trim: true, maxlength: 160 },
+    idempotencyKey: { type: String, required: true, trim: true, maxlength: 120 },
+    requestHash: { type: String, required: true, select: false },
     paymentMethod: {
       type: String,
       enum: ['cash', 'card', 'mobile_money', 'other'],
@@ -58,6 +63,7 @@ const saleSchema = new mongoose.Schema(
 )
 
 saleSchema.index({ invoiceNumber: 1 }, { unique: true })
+saleSchema.index({ soldBy: 1, idempotencyKey: 1 }, { unique: true, sparse: true })
 saleSchema.index({ saleDate: -1 })
 saleSchema.index({ soldBy: 1, saleDate: -1 })
 
