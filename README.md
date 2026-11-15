@@ -201,7 +201,15 @@ PharmaCare/
 │           ├── WorkspacePages.jsx
 │           └── pageMeta.js
 ├── docs/
-│   └── TECHNICAL-REPORT.md
+│   ├── AI-ATTRIBUTION.md
+│   ├── API-DOCUMENTATION.md
+│   ├── ARCHITECTURE.md
+│   ├── DEPLOYMENT-GUIDE.md
+│   ├── ER-DIAGRAM.md
+│   ├── SUBMISSION-CHECKLIST.md
+│   ├── TECHNICAL-REPORT.md
+│   ├── TEST-REPORT.md
+│   └── USER-GUIDE.md
 └── server/
     ├── .env.example
     ├── jest.config.js
@@ -492,6 +500,12 @@ include authentication and users, medicines, categories, suppliers, purchases,
 batches, inventory, sales and invoices, returns, and reports. The OpenAPI
 document and route files are the authoritative references for exact methods,
 request schemas, and permissions.
+
+The repository also includes a comprehensive route-by-route reference at
+[`docs/API-DOCUMENTATION.md`](./docs/API-DOCUMENTATION.md), alongside the
+[`architecture`](./docs/ARCHITECTURE.md), [`ER diagram`](./docs/ER-DIAGRAM.md),
+[`user guide`](./docs/USER-GUIDE.md), and
+[`test report`](./docs/TEST-REPORT.md).
 
 ## Seed data
 
