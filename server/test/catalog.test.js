@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { Batch, Category, Medicine } from '../src/models/index.js'
 import { deleteCategory } from '../src/services/categoryService.js'
+import { medicineCatalog } from '../src/scripts/medicineCatalog.js'
 import {
   deleteMedicine,
   getCurrentMedicinePrices,
@@ -16,6 +17,19 @@ import {
 } from '../src/validators/catalogValidators.js'
 
 const objectId = '507f1f77bcf86cd799439011'
+
+test('demo catalog contains 100 searchable, categorized medicines with uses and prices', () => {
+  assert.equal(medicineCatalog.length, 100)
+  assert.equal(new Set(medicineCatalog.map(({ name }) => name)).size, 100)
+  assert.ok(medicineCatalog.every(({ name, genericName, description, price, categoryName }) =>
+    name && genericName && description && price > 0 && categoryName))
+  const countsByCategory = medicineCatalog.reduce((counts, { categoryName }) => {
+    counts.set(categoryName, (counts.get(categoryName) ?? 0) + 1)
+    return counts
+  }, new Map())
+  assert.equal(countsByCategory.size, 10)
+  assert.ok([...countsByCategory.values()].every((count) => count === 10))
+})
 
 test('medicine validators require core fields and reject stock mutation', () => {
   const invalid = medicineCreateSchema.safeParse({
@@ -149,6 +163,39 @@ test('medicine listing includes inactive records only when requested', async () 
       includeInactive: true,
     })
     assert.equal('isActive' in capturedFilter, false)
+  } finally {
+    Medicine.find = originalFind
+    Medicine.countDocuments = originalCount
+  }
+})
+
+test('medicine search matches a short case-insensitive name or generic-name fragment', async () => {
+  const originalFind = Medicine.find
+  const originalCount = Medicine.countDocuments
+  let capturedFilter
+  Medicine.find = (filter) => {
+    capturedFilter = filter
+    return {
+      populate() { return this },
+      sort() { return this },
+      skip() { return this },
+      limit() { return this },
+      lean: async () => [],
+    }
+  }
+  Medicine.countDocuments = async () => 0
+
+  try {
+    await listMedicines({
+      search: 'ceti',
+      page: 1,
+      limit: 25,
+      sortBy: 'name',
+      sortOrder: 'asc',
+      includeInactive: false,
+    })
+    assert.equal(capturedFilter.$or[0].name.test('Cetirizine 10 mg Tablets'), true)
+    assert.equal(capturedFilter.$or[1].genericName.test('cetirizine'), true)
   } finally {
     Medicine.find = originalFind
     Medicine.countDocuments = originalCount

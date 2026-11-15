@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { once } from 'node:events'
 import jwt from 'jsonwebtoken'
 import { after, before, test } from 'node:test'
+import { listUsers } from '../src/services/authService.js'
 
 process.env.MONGODB_URI ??= 'mongodb://127.0.0.1:27017/pharmacare-test'
 process.env.JWT_SECRET ??= 'test-only-secret-that-is-at-least-32-characters'
@@ -29,6 +30,35 @@ after(async () => {
     await new Promise((resolve, reject) => {
       server.close((error) => (error ? reject(error) : resolve()))
     })
+  }
+})
+
+test('user list includes the id field used by user management actions', async () => {
+  const originalFind = User.find
+  const originalCountDocuments = User.countDocuments
+  const userId = '507f1f77bcf86cd799439011'
+
+  User.find = () => ({
+    select() { return this },
+    sort() { return this },
+    skip() { return this },
+    limit() { return this },
+    lean: async () => [{
+      _id: { toString: () => userId },
+      name: 'Test Pharmacist',
+      email: 'pharmacist@example.test',
+      role: 'customer',
+      isActive: true,
+    }],
+  })
+  User.countDocuments = async () => 1
+
+  try {
+    const result = await listUsers({ page: 1, limit: 50 })
+    assert.equal(result.users[0].id, userId)
+  } finally {
+    User.find = originalFind
+    User.countDocuments = originalCountDocuments
   }
 })
 

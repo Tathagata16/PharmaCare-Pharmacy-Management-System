@@ -28,6 +28,15 @@ function useNotice() {
   return { notice, notify, clear: () => setNotice('') }
 }
 
+function useDebouncedValue(value, delay = 200) {
+  const [debouncedValue, setDebouncedValue] = useState(value)
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setDebouncedValue(value), delay)
+    return () => window.clearTimeout(timeout)
+  }, [value, delay])
+  return debouncedValue
+}
+
 function useLoad(loader, deps = []) {
   const [state, setState] = useState({ data: null, loading: true, error: '' })
   const loaderRef = useRef(loader)
@@ -58,10 +67,10 @@ function useLoad(loader, deps = []) {
   return { ...state, refresh }
 }
 
-function StatePanel({ loading, error, empty, children }) {
+function StatePanel({ loading, error, empty = false, emptyMessage = 'No records found.', children }) {
   if (loading) return <div className="state-panel"><LoaderCircle className="spin" size={20} /> Loading data…</div>
   if (error) return <div className="state-panel error-state" role="alert"><AlertTriangle size={18} />{error}</div>
-  if (empty) return <div className="state-panel">{empty}</div>
+  if (empty) return <div className="state-panel">{emptyMessage}</div>
   return children
 }
 
@@ -118,7 +127,7 @@ export function DashboardPage() {
             <div className="dashboard-columns">
               <section className="surface chart-panel">
                 <div className="panel-heading"><div><h2>Sales trend</h2><p>Daily revenue from completed sales</p></div><span className="soft-tag">Last 7 days</span></div>
-                <StatePanel loading={chart.loading} error={chart.error} empty="No sales in this period.">
+                <StatePanel loading={chart.loading} error={chart.error} empty={chartData.length === 0} emptyMessage="No sales in this period.">
                   <Suspense fallback={<div className="state-panel">Loading chart…</div>}><SalesTrendChart data={chartData} /></Suspense>
                 </StatePanel>
               </section>
@@ -184,6 +193,7 @@ function CatalogPage({ kind }) {
   const { notice, notify, clear } = useNotice()
   const canEdit = ['admin', 'pharmacist'].includes(user.role)
   const [search, setSearch] = useState('')
+  const debouncedSearch = useDebouncedValue(search)
   const [categoryFilter, setCategoryFilter] = useState('')
   const [manufacturerFilter, setManufacturerFilter] = useState('')
   const [activeFilter, setActiveFilter] = useState('')
@@ -197,15 +207,15 @@ function CatalogPage({ kind }) {
   const isMedicine = kind === 'medicines'
   const loader = isMedicine
     ? () => catalogApi.medicines({
-      search, category: categoryFilter || undefined, manufacturer: manufacturerFilter || undefined,
+      search: debouncedSearch, category: categoryFilter || undefined, manufacturer: manufacturerFilter || undefined,
       page, limit: 10, sortBy: 'name', sortOrder: 'asc',
     })
     : kind === 'suppliers'
       ? () => catalogApi.suppliers({
-        search, isActive: activeFilter || undefined, page, limit: 10, sortBy: 'name', sortOrder: 'asc',
+        search: debouncedSearch, isActive: activeFilter || undefined, page, limit: 10, sortBy: 'name', sortOrder: 'asc',
       })
       : () => catalogApi.categories()
-  const state = useLoad(loader, [kind, search, categoryFilter, manufacturerFilter, activeFilter, page])
+  const state = useLoad(loader, [kind, debouncedSearch, categoryFilter, manufacturerFilter, activeFilter, page])
 
   useEffect(() => {
     if (isMedicine) catalogApi.categories().then(({ data }) => setCategories(data.categories)).catch(() => setCategories([]))
@@ -216,13 +226,16 @@ function CatalogPage({ kind }) {
   const columns = isMedicine && user.role === 'customer' ? [
     ['name', 'Medicine'],
     ['genericName', 'Generic name'],
+    ['description', 'Usage'],
     ['brand', 'Brand'],
     ['category.name', 'Category'],
     ['price', 'Price', (value) => value == null ? 'Currently unavailable' : currency.format(value)],
   ] : isMedicine ? [
     ['name', 'Medicine', (value, row) => <span className="row-primary">{value}<small>{row.genericName} · {row.brand || 'No brand'}</small></span>],
+    ['description', 'Usage'],
     ['category.name', 'Category'],
     ['manufacturer', 'Manufacturer'],
+    ['price', 'Price', (value) => value == null ? 'Unavailable' : currency.format(value)],
     ['reorderLevel', 'Reorder'],
     ['isActive', 'Status', (value) => <StatusPill active={value} />],
   ] : kind === 'suppliers' ? [
@@ -304,7 +317,7 @@ function CatalogPage({ kind }) {
     {notice && <Toast message={notice} clear={clear} />}
     <section className="surface data-panel">
       <div className="table-toolbar filter-toolbar">
-        <label className="search-control"><Search size={17} /><input aria-label={`Search ${title}`} placeholder={`Search ${title.toLowerCase()}…`} value={search} onChange={(event) => { setSearch(event.target.value); setPage(1) }} /></label>
+        <label className="search-control"><Search size={17} /><input aria-label={`Search ${title}`} placeholder={isMedicine ? 'Search by name or generic name…' : `Search ${title.toLowerCase()}…`} value={search} onChange={(event) => { setSearch(event.target.value); setPage(1) }} /></label>
         {isMedicine && user.role !== 'customer' && <>
           <select aria-label="Filter by category" value={categoryFilter} onChange={(event) => { setCategoryFilter(event.target.value); setPage(1) }}><option value="">All categories</option>{categories.map((category) => <option value={category._id} key={category._id}>{category.name}</option>)}</select>
           <input aria-label="Filter by manufacturer" placeholder="Manufacturer" value={manufacturerFilter} onChange={(event) => { setManufacturerFilter(event.target.value); setPage(1) }} />
@@ -312,7 +325,7 @@ function CatalogPage({ kind }) {
         {kind === 'suppliers' && <select aria-label="Filter suppliers by status" value={activeFilter} onChange={(event) => { setActiveFilter(event.target.value); setPage(1) }}><option value="">All statuses</option><option value="true">Active</option><option value="false">Inactive</option></select>}
         <button className="button secondary" onClick={state.refresh}><RefreshCw size={15} /> Refresh</button>
       </div>
-      <StatePanel loading={state.loading} error={state.error} empty={`No ${title.toLowerCase()} found.`}>
+      <StatePanel loading={state.loading} error={state.error} empty={rows.length === 0} emptyMessage={`No ${title.toLowerCase()} found.`}>
         <RecordTable rows={rows} columns={[...columns, ...(canEdit || user.role === 'customer' ? [['actions', 'Actions', (_, row) => user.role === 'customer' ? <button className="button tiny" onClick={() => setSelectedMedicine(row)}>Details</button> : <span className="row-actions">{kind === 'suppliers' && <button className="button tiny" onClick={() => viewSupplierHistory(row)}>History</button>}<button className="icon-btn" aria-label={`Edit ${row.name}`} onClick={() => setModal({ row })}><Pencil size={15} /></button>{kind === 'categories' ? <button className="icon-btn danger-text" aria-label={`Delete ${row.name}`} onClick={() => removeCategory(row)}><Trash2 size={15} /></button> : <><button className="button tiny" onClick={() => toggleActive(row)}>{row.isActive ? 'Deactivate' : 'Activate'}</button>{isMedicine && <button className="icon-btn danger-text" aria-label={`Delete ${row.name}`} onClick={() => removeMedicine(row)}><Trash2 size={15} /></button>}</>}</span>]] : [])]} />
       </StatePanel>
       {isMedicine || kind === 'suppliers' ? <Pagination page={page} total={state.data?.total ?? 0} limit={10} onPage={setPage} /> : null}
@@ -337,15 +350,25 @@ export function InventoryPage() {
     return { data: { low: low.data.medicines, near: near.data.batches, valuation: valuation.data } }
   }, [canAdjust])
   const [adjustment, setAdjustment] = useState(null)
+  const [adjustmentType, setAdjustmentType] = useState('damaged')
   const [notice, setNotice] = useState('')
   async function submitAdjustment(event) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
+    const enteredQuantity = Number(form.get('quantityChange'))
+    if (!Number.isInteger(enteredQuantity) || enteredQuantity === 0) {
+      setNotice('Enter a non-zero whole number of units.')
+      return
+    }
+    const type = form.get('adjustmentType')
+    const quantityChange = ['damaged', 'expired', 'missing'].includes(type)
+      ? -Math.abs(enteredQuantity)
+      : enteredQuantity
     try {
       await operationsApi.adjustStock({
         batch: adjustment._id,
-        adjustmentType: form.get('adjustmentType'),
-        quantityChange: Number(form.get('quantityChange')),
+        adjustmentType: type,
+        quantityChange,
         reason: form.get('reason'),
       })
       setNotice('Stock adjustment recorded with movement and audit history.')
@@ -363,7 +386,7 @@ export function InventoryPage() {
     </section>
     <section className="surface data-panel">
       <div className="panel-heading"><div><h2>Batch stock</h2><p>Ordered by expiry date (FEFO)</p></div><PackageSearch size={19} className="muted-icon" /></div>
-      <StatePanel loading={state.loading} error={state.error} empty="No batch records found.">
+      <StatePanel loading={state.loading} error={state.error} empty={(state.data?.batches?.length ?? 0) === 0} emptyMessage="No batch records found.">
         <RecordTable rows={state.data?.batches ?? []} columns={[
           ['medicine.name', 'Medicine'],
           ['batchNumber', 'Batch'],
@@ -372,11 +395,11 @@ export function InventoryPage() {
           ['purchasePrice', 'Cost', (value) => currency.format(value)],
           ['sellingPrice', 'Price', (value) => currency.format(value)],
           ['expiryDate', 'Expiry', (value) => dateFormat.format(new Date(value))],
-          ...(canAdjust ? [['actions', 'Action', (_, row) => <button className="button tiny" onClick={() => setAdjustment(row)}>Adjust stock</button>]] : []),
+          ...(canAdjust ? [['actions', 'Action', (_, row) => <button className="button tiny" onClick={() => { setAdjustmentType('damaged'); setAdjustment(row) }}>Adjust stock</button>]] : []),
         ]} />
       </StatePanel>
     </section>
-    {adjustment && <div className="modal-backdrop"><form className="form-modal" onSubmit={submitAdjustment}><div className="modal-header"><h2>Adjust {adjustment.batchNumber}</h2><button className="icon-btn" type="button" onClick={() => setAdjustment(null)} aria-label="Close"><X size={18} /></button></div><p className="muted">Current quantity: {adjustment.quantity}. Use a negative quantity to remove stock.</p><label>Adjustment type<select name="adjustmentType" required><option value="damaged">Damaged</option><option value="expired">Expired</option><option value="missing">Missing</option><option value="physical_correction">Physical stock correction</option><option value="other">Other</option></select></label><label>Quantity change<input name="quantityChange" type="number" step="1" required /></label><label>Reason<textarea name="reason" minLength="1" maxLength="500" required /></label><div className="modal-actions"><button type="button" className="button secondary" onClick={() => setAdjustment(null)}>Cancel</button><button className="button primary">Record adjustment</button></div></form></div>}
+    {adjustment && <div className="modal-backdrop"><form className="form-modal" onSubmit={submitAdjustment}><div className="modal-header"><h2>Adjust {adjustment.batchNumber}</h2><button className="icon-btn" type="button" onClick={() => setAdjustment(null)} aria-label="Close"><X size={18} /></button></div><p className="muted">Current quantity: {adjustment.quantity}. Damaged, expired, and missing units are subtracted automatically. For a physical correction or other adjustment, enter a positive number to add stock or a negative number to remove it.</p><label>Adjustment type<select name="adjustmentType" value={adjustmentType} onChange={(event) => setAdjustmentType(event.target.value)} required><option value="damaged">Damaged</option><option value="expired">Expired</option><option value="missing">Missing</option><option value="physical_correction">Physical stock correction</option><option value="other">Other</option></select></label><label>Quantity {['damaged', 'expired', 'missing'].includes(adjustmentType) ? 'to remove' : 'change'}<input name="quantityChange" type="number" min={['damaged', 'expired', 'missing'].includes(adjustmentType) ? 1 : undefined} step="1" required /></label><label>Reason<textarea name="reason" minLength="1" maxLength="500" required /></label><div className="modal-actions"><button type="button" className="button secondary" onClick={() => setAdjustment(null)}>Cancel</button><button className="button primary">Record adjustment</button></div></form></div>}
   </>
 }
 
@@ -416,7 +439,7 @@ export function PurchasesPage() {
   return <>
     <PageHeader eyebrow="PROCUREMENT" title="Purchases" description="Receive supplier purchases into new, traceable batches." action={canManage && <button className="button primary" onClick={() => setModal(true)}><Plus size={16} /> New purchase</button>} />
     {notice && <Toast message={notice} clear={() => setNotice('')} />}
-    <section className="surface data-panel"><StatePanel loading={state.loading} error={state.error} empty="No purchase invoices yet."><RecordTable rows={state.data?.purchases ?? []} columns={[
+    <section className="surface data-panel"><StatePanel loading={state.loading} error={state.error} empty={(state.data?.purchases?.length ?? 0) === 0} emptyMessage="No purchase invoices yet."><RecordTable rows={state.data?.purchases ?? []} columns={[
       ['invoiceNumber', 'Invoice'], ['supplier.name', 'Supplier'],
       ['purchaseDate', 'Date', (value) => dateTimeFormat.format(new Date(value))],
       ['processedBy.name', 'Processed by'], ['totalAmount', 'Total', (value) => currency.format(value)],
@@ -428,7 +451,8 @@ export function PurchasesPage() {
 
 export function SalesPage() {
   const [search, setSearch] = useState('')
-  const state = useLoad(() => catalogApi.medicines({ search, page: 1, limit: 20 }), [search])
+  const debouncedSearch = useDebouncedValue(search)
+  const state = useLoad(() => catalogApi.medicines({ search: debouncedSearch, page: 1, limit: 20 }), [debouncedSearch])
   const [cart, setCart] = useState([])
   const [discount, setDiscount] = useState(0)
   const [paymentMethod, setPaymentMethod] = useState('cash')
@@ -470,7 +494,7 @@ export function SalesPage() {
   return <>
     <PageHeader eyebrow="POINT OF SALE" title="Sales & billing" description="Add medicines to the cart. Batch allocation, pricing, tax and totals are verified by the server." />
     {notice && <Toast message={notice} clear={() => setNotice('')} />}
-    <div className="pos-layout"><section className="surface pos-products"><label className="search-control"><Search size={17} /><input aria-label="Search medicines for a sale" placeholder="Search medicines…" value={search} onChange={(event) => setSearch(event.target.value)} /></label><StatePanel loading={state.loading} error={state.error} empty="No available medicines match your search."><div className="product-list">{(state.data?.medicines ?? []).map((item) => <button className="product-option" key={item._id} onClick={() => add(item)}><span className="product-symbol"><Package size={18} /></span><span><b>{item.name}</b><small>{item.genericName}</small></span><Plus size={17} /></button>)}</div></StatePanel></section><section className="surface cart-panel"><div className="panel-heading"><div><h2>Current sale</h2><p>{cart.length} distinct medicines</p></div><ShoppingCart size={18} /></div>{!cart.length ? <div className="cart-empty">Select a medicine to begin billing.</div> : cart.map((line) => <div className="cart-line" key={line._id}><div><b>{line.name}</b><small>{line.genericName} · {line.availableStock} available</small></div><input aria-label={`Quantity for ${line.name}`} type="number" min="1" max={line.availableStock} step="1" value={line.quantity} onChange={(event) => setCart(cart.map((item) => item._id === line._id ? { ...item, quantity: Math.min(Number(event.target.value), item.availableStock) } : item))} /><button className="icon-btn" aria-label={`Remove ${line.name}`} onClick={() => setCart(cart.filter((item) => item._id !== line._id))}><X size={15} /></button></div>)}<div className="checkout-fields"><label>Discount amount<input type="number" min="0" step=".01" value={discount} onChange={(event) => setDiscount(event.target.value)} /></label><label>Payment method<select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)}><option value="cash">Cash</option><option value="card">Card</option><option value="mobile_money">Mobile money</option><option value="other">Other</option></select></label></div><button className="button primary wide" disabled={!cart.length || busy} onClick={checkout}>{busy ? 'Processing…' : 'Complete sale'}</button><p className="hint-copy">Invoice totals use server pricing, configured tax, and server-side discount limits.</p></section></div>
+    <div className="pos-layout"><section className="surface pos-products"><label className="search-control"><Search size={17} /><input aria-label="Search medicines for a sale" placeholder="Search by medicine or generic name…" value={search} onChange={(event) => setSearch(event.target.value)} /></label><StatePanel loading={state.loading} error={state.error} empty={(state.data?.medicines?.length ?? 0) === 0} emptyMessage="No available medicines match your search."><div className="product-list">{(state.data?.medicines ?? []).map((item) => <button className="product-option" key={item._id} onClick={() => add(item)}><span className="product-symbol"><Package size={18} /></span><span><b>{item.name}</b><small>{item.genericName} · {item.description}</small></span><span>{item.price == null ? 'Unavailable' : currency.format(item.price)}</span><Plus size={17} /></button>)}</div></StatePanel></section><section className="surface cart-panel"><div className="panel-heading"><div><h2>Current sale</h2><p>{cart.length} distinct medicines</p></div><ShoppingCart size={18} /></div>{!cart.length ? <div className="cart-empty">Select a medicine to begin billing.</div> : cart.map((line) => <div className="cart-line" key={line._id}><div><b>{line.name}</b><small>{line.genericName} · {line.availableStock} available</small></div><input aria-label={`Quantity for ${line.name}`} type="number" min="1" max={line.availableStock} step="1" value={line.quantity} onChange={(event) => setCart(cart.map((item) => item._id === line._id ? { ...item, quantity: Math.min(Number(event.target.value), item.availableStock) } : item))} /><button className="icon-btn" aria-label={`Remove ${line.name}`} onClick={() => setCart(cart.filter((item) => item._id !== line._id))}><X size={15} /></button></div>)}<div className="checkout-fields"><label>Discount amount<input type="number" min="0" step=".01" value={discount} onChange={(event) => setDiscount(event.target.value)} /></label><label>Payment method<select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)}><option value="cash">Cash</option><option value="card">Card</option><option value="mobile_money">Mobile money</option><option value="other">Other</option></select></label></div><button className="button primary wide" disabled={!cart.length || busy} onClick={checkout}>{busy ? 'Processing…' : 'Complete sale'}</button><p className="hint-copy">Invoice totals use server pricing, configured tax, and server-side discount limits.</p></section></div>
     {invoice && <section className="surface invoice-preview"><div className="panel-heading"><div><h2>Invoice preview · {invoice.invoiceNumber}</h2><p>{invoice.pharmacyName} · {dateTimeFormat.format(new Date(invoice.dateTime))}</p></div><button className="button secondary" onClick={async () => { const response = await api.get(`/sales/${invoice.saleId}/invoice/print`); const windowRef = window.open('', '_blank'); if (windowRef) { windowRef.document.write(response.data); windowRef.document.close() } }}><Printer size={15} /> Print</button></div><RecordTable rows={invoice.items} columns={[[ 'medicineName', 'Medicine'], ['batchNumber', 'Batch'], ['quantity', 'Qty'], ['unitPrice', 'Unit price', (value) => currency.format(value)], ['lineTotal', 'Line total', (value) => currency.format(value)]]} /><p className="invoice-total">Grand total: {currency.format(invoice.grandTotal)} · {invoice.paymentMethod}</p></section>}
   </>
 }
@@ -527,7 +551,7 @@ export function ReturnsPage() {
           </form>
         </StatePanel>
       </section>
-      <section className="surface data-panel"><div className="panel-heading"><div><h2>Recent returns</h2><p>Inspection queue</p></div></div><StatePanel loading={state.loading} error={state.error} empty="No returns recorded."><RecordTable rows={state.data?.returns ?? []} columns={[[ 'returnReference', 'Reference'], ['invoiceNumber', 'Invoice'], ['reason', 'Reason'], ['totalAmount', 'Amount', (value) => currency.format(value)], ['status', 'Status']]}/></StatePanel></section>
+      <section className="surface data-panel"><div className="panel-heading"><div><h2>Recent returns</h2><p>Inspection queue</p></div></div><StatePanel loading={state.loading} error={state.error} empty={(state.data?.returns?.length ?? 0) === 0} emptyMessage="No returns recorded."><RecordTable rows={state.data?.returns ?? []} columns={[[ 'returnReference', 'Reference'], ['invoiceNumber', 'Invoice'], ['reason', 'Reason'], ['totalAmount', 'Amount', (value) => currency.format(value)], ['status', 'Status']]}/></StatePanel></section>
     </div>
   </>
 }
@@ -548,11 +572,14 @@ export function ReportsPage() {
   }, [tab, range.from, range.to])
   const { data } = state
   const rows = tab === 'sales' ? data?.results : tab === 'stock' ? data?.medicines : tab === 'suppliers' ? data?.suppliers : data?.within30Days
+  const hasReportRows = tab === 'expiry'
+    ? Boolean(data && [data.expired, data.within30Days, data.within60Days, data.within90Days].some((records) => records?.length))
+    : Boolean(rows?.length)
   return <>
     <PageHeader eyebrow="ANALYTICS" title="Reports" description="Filter backend-calculated sales, stock, expiry and supplier summaries." action={<button className="button secondary" onClick={state.refresh}><RefreshCw size={15} /> Refresh</button>} />
     <section className="surface report-toolbar"><div className="tabs" role="tablist">{['sales', 'stock', 'expiry', 'suppliers'].map((item) => <button role="tab" aria-selected={tab === item} className={tab === item ? 'selected' : ''} key={item} onClick={() => setTab(item)}>{item[0].toUpperCase() + item.slice(1)}</button>)}</div>{tab !== 'expiry' && <div className="date-filters"><label>From<input type="date" value={range.from} onChange={(event) => setRange({ ...range, from: event.target.value })} /></label><label>To<input type="date" value={range.to} onChange={(event) => setRange({ ...range, to: event.target.value })} /></label></div>}</section>
     <section className="surface data-panel">
-      <StatePanel loading={state.loading} error={state.error} empty="No report data for this period.">
+      <StatePanel loading={state.loading} error={state.error} empty={!hasReportRows} emptyMessage="No report data for this period.">
         {tab === 'sales' ? <>
           <div className="summary-strip">
             <span>Revenue <b>{currency.format(data?.summary?.revenue ?? 0)}</b></span>
@@ -589,7 +616,7 @@ function ExpiryGroup({ title, records }) { return <div className="expiry-group">
 
 export function MovementsPage() {
   const state = useLoad(() => operationsApi.movements({ page: 1, limit: 100 }), [])
-  return <><PageHeader eyebrow="AUDIT TRAIL" title="Stock movements" description="Append-only movement history for purchases, sales, returns and adjustments."/><section className="surface data-panel"><StatePanel loading={state.loading} error={state.error} empty="No stock movements found."><RecordTable rows={state.data?.movements ?? []} columns={[[ 'timestamp', 'Timestamp', (value) => dateTimeFormat.format(new Date(value))], ['medicine.name', 'Medicine'], ['batch.batchNumber', 'Batch'], ['movementType', 'Type'], ['previousQuantity', 'Previous'], ['quantityChanged', 'Change'], ['newQuantity', 'New'], ['reason', 'Reason'], ['performedBy.name', 'User']]}/></StatePanel></section></>
+  return <><PageHeader eyebrow="AUDIT TRAIL" title="Stock movements" description="Append-only movement history for purchases, sales, returns and adjustments."/><section className="surface data-panel"><StatePanel loading={state.loading} error={state.error} empty={(state.data?.movements?.length ?? 0) === 0} emptyMessage="No stock movements found."><RecordTable rows={state.data?.movements ?? []} columns={[[ 'timestamp', 'Timestamp', (value) => dateTimeFormat.format(new Date(value))], ['medicine.name', 'Medicine'], ['batch.batchNumber', 'Batch'], ['movementType', 'Type'], ['previousQuantity', 'Previous'], ['quantityChanged', 'Change'], ['newQuantity', 'New'], ['reason', 'Reason'], ['performedBy.name', 'User']]}/></StatePanel></section></>
 }
 
 export function UsersPage() {
@@ -601,7 +628,7 @@ export function UsersPage() {
   async function toggle(user) {
     try { await authApi.setActive(user.id, !user.isActive); setNotice('User activation updated.'); state.refresh() } catch (error) { setNotice(getApiError(error)) }
   }
-  return <><PageHeader eyebrow="ADMINISTRATION" title="User management" description="Manage account roles and access status."/>{notice && <Toast message={notice} clear={() => setNotice('')}/>}<section className="surface data-panel"><StatePanel loading={state.loading} error={state.error} empty="No users found."><div className="table-scroll"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Action</th></tr></thead><tbody>{(state.data?.users ?? []).map((user) => <tr key={user.id}><td>{user.name}</td><td>{user.email}</td><td><select aria-label={`Role for ${user.name}`} value={user.role} onChange={(event) => updateRole(user, event.target.value)}><option value="admin">Admin</option><option value="pharmacist">Pharmacist</option><option value="cashier">Cashier</option><option value="customer">Customer</option></select></td><td><StatusPill active={user.isActive}/></td><td><button className="button tiny" onClick={() => toggle(user)}>{user.isActive ? 'Deactivate' : 'Activate'}</button></td></tr>)}</tbody></table></div></StatePanel></section></>
+  return <><PageHeader eyebrow="ADMINISTRATION" title="User management" description="Manage account roles and access status."/>{notice && <Toast message={notice} clear={() => setNotice('')}/>}<section className="surface data-panel"><StatePanel loading={state.loading} error={state.error} empty={(state.data?.users?.length ?? 0) === 0} emptyMessage="No users found."><div className="table-scroll"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Action</th></tr></thead><tbody>{(state.data?.users ?? []).map((user) => <tr key={user.id}><td>{user.name}</td><td>{user.email}</td><td><select aria-label={`Role for ${user.name}`} value={user.role} onChange={(event) => updateRole(user, event.target.value)}><option value="admin">Admin</option><option value="pharmacist">Pharmacist</option><option value="cashier">Cashier</option><option value="customer">Customer</option></select></td><td><StatusPill active={user.isActive}/></td><td><button className="button tiny" onClick={() => toggle(user)}>{user.isActive ? 'Deactivate' : 'Activate'}</button></td></tr>)}</tbody></table></div></StatePanel></section></>
 }
 
 export function ProfilePage() {

@@ -9,7 +9,8 @@
     "test:coverage": "node --experimental-test-coverage --test ./test/*.test.js && npm run test:jest -- --coverage",
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "seed": "node src/scripts/seed.js"
+    "seed": "node src/scripts/seed.js",
+    "create-admin": "node src/scripts/createAdmin.js"
   },
   "keywords": [],
   "author": "",

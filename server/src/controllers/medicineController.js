@@ -16,8 +16,8 @@ export async function getMedicines(req, res) {
     ...req.validated.query,
     includeInactive: canManageMedicines(req.user),
   })
+  const prices = await getCurrentMedicinePrices(result.medicines.map(({ _id }) => _id))
   if (req.user.role === 'customer') {
-    const prices = await getCurrentMedicinePrices(result.medicines.map(({ _id }) => _id))
     result.medicines = result.medicines.map((medicine) => ({
       _id: medicine._id,
       name: medicine.name,
@@ -26,6 +26,11 @@ export async function getMedicines(req, res) {
       category: medicine.category,
       manufacturer: medicine.manufacturer,
       description: medicine.description,
+      price: prices.get(medicine._id.toString()) ?? null,
+    }))
+  } else {
+    result.medicines = result.medicines.map((medicine) => ({
+      ...medicine,
       price: prices.get(medicine._id.toString()) ?? null,
     }))
   }
@@ -51,7 +56,13 @@ export async function getMedicine(req, res) {
       },
     })
   }
-  res.json({ medicine })
+  const prices = await getCurrentMedicinePrices([medicine._id])
+  res.json({
+    medicine: {
+      ...medicine,
+      price: prices.get(medicine._id.toString()) ?? null,
+    },
+  })
 }
 
 export async function postMedicine(req, res) {

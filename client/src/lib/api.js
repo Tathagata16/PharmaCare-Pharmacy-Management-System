@@ -16,7 +16,14 @@ export function getApiError(error) {
     if (error.code === 'ERR_NETWORK') {
       return 'Cannot reach the PharmaCare API. Start the server and check its MongoDB connection, then try again.'
     }
-    return error.response?.data?.error || error.message || 'The request could not be completed.'
+    const responseData = error.response?.data
+    if (responseData?.details?.length) {
+      const details = responseData.details
+        .map(({ path, message }) => `${path}: ${message}`)
+        .join('; ')
+      return `${responseData.error || 'Invalid request'}: ${details}`
+    }
+    return responseData?.error || error.message || 'The request could not be completed.'
   }
   return error instanceof Error ? error.message : 'The request could not be completed.'
 }

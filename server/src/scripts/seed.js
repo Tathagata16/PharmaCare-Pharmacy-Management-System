@@ -1,11 +1,19 @@
 import { connectDatabase } from '../config/database.js'
 import { Batch, Category, Medicine, Supplier } from '../models/index.js'
+import { medicineCatalog } from './medicineCatalog.js'
 import mongoose from 'mongoose'
 
 const categories = [
   { name: 'Pain Relief', description: 'Non-prescription pain and fever relief.' },
   { name: 'Digestive Health', description: 'Products for common digestive concerns.' },
   { name: 'First Aid', description: 'Basic wound-care and first-aid supplies.' },
+  { name: 'Allergy Care', description: 'Products for common allergy symptoms.' },
+  { name: 'Cold & Respiratory', description: 'Products for common cold and respiratory symptoms.' },
+  { name: 'Skin Care', description: 'Topical skin care and common skin treatments.' },
+  { name: 'Vitamins & Supplements', description: 'Dietary supplements and vitamins.' },
+  { name: 'Eye & Ear Care', description: 'Products for common eye and ear care needs.' },
+  { name: 'Oral Care', description: 'Medicines and products for oral care.' },
+  { name: 'Women’s Health', description: 'Women’s health products and supplements.' },
 ]
 
 const suppliers = [
@@ -111,7 +119,7 @@ async function upsertByName(Model, data) {
   return Model.findOneAndUpdate(
     { name: data.name },
     { $setOnInsert: data },
-    { upsert: true, new: true, runValidators: true },
+    { upsert: true, returnDocument: 'after', runValidators: true },
   )
 }
 
@@ -134,7 +142,25 @@ async function seed() {
     const medicine = await Medicine.findOneAndUpdate(
       { name: data.name, manufacturer: data.manufacturer },
       { $setOnInsert: { ...data, category: category._id } },
-      { upsert: true, new: true, runValidators: true },
+      { upsert: true, returnDocument: 'after', runValidators: true },
+    )
+    medicineByName.set(data.name, medicine)
+  }
+
+  for (const { categoryName, price, ...data } of medicineCatalog) {
+    const category = categoryByName.get(categoryName)
+    const medicine = await Medicine.findOneAndUpdate(
+      { name: data.name, manufacturer: 'PharmaCare Demo Manufacturer' },
+      {
+        $setOnInsert: {
+          ...data,
+          brand: 'Generic',
+          category: category._id,
+          manufacturer: 'PharmaCare Demo Manufacturer',
+          reorderLevel: 10,
+        },
+      },
+      { upsert: true, returnDocument: 'after', runValidators: true },
     )
     medicineByName.set(data.name, medicine)
   }
@@ -153,12 +179,39 @@ async function seed() {
           receivedDate: new Date(receivedDate),
         },
       },
-      { upsert: true, new: true, runValidators: true },
+      { upsert: true, returnDocument: 'after', runValidators: true },
+    )
+  }
+
+  const expiryDate = new Date()
+  expiryDate.setFullYear(expiryDate.getFullYear() + 3)
+  const receivedDate = new Date()
+  for (const [index, catalogEntry] of medicineCatalog.entries()) {
+    const medicine = medicineByName.get(catalogEntry.name)
+    const supplier = supplierByName.get(
+      index % 2 === 0 ? suppliers[0].name : suppliers[1].name,
+    )
+    const batchNumber = `DEMO-CATALOG-${String(index + 1).padStart(3, '0')}`
+    await Batch.findOneAndUpdate(
+      { medicine: medicine._id, batchNumber },
+      {
+        $setOnInsert: {
+          medicine: medicine._id,
+          supplier: supplier._id,
+          batchNumber,
+          quantity: 40,
+          purchasePrice: Number((catalogEntry.price * 0.65).toFixed(2)),
+          sellingPrice: catalogEntry.price,
+          expiryDate,
+          receivedDate,
+        },
+      },
+      { upsert: true, returnDocument: 'after', runValidators: true },
     )
   }
 
   console.log(
-    `Seed complete: ${categories.length} categories, ${medicines.length} medicines, ${suppliers.length} suppliers, ${batches.length} batches (existing records were left unchanged).`,
+    `Seed complete: ${categories.length} categories, ${medicineCatalog.length} catalog medicines, ${medicines.length} sample medicines, ${suppliers.length} suppliers, ${batches.length + medicineCatalog.length} batches (existing records were left unchanged).`,
   )
 }
 

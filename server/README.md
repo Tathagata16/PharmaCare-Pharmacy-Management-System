@@ -20,6 +20,16 @@ The API defaults to `http://localhost:5001`. Readiness is available at
 `/api/health`; Swagger UI and OpenAPI JSON are served at `/api/docs` and
 `/api/docs.json`.
 
+The idempotent development seed adds 100 sample medicines with use
+descriptions, selling-price batches, and starter stock. Prices are illustrative;
+catalog descriptions are not medical advice.
+
+To create the first administrator, run `npm run create-admin` from a private
+terminal in the server directory. It prompts for the account details, hides the
+password while typing, and refuses to create an additional admin. Sign in with
+that account through the normal client login page; public registration remains
+customer-only.
+
 ## Security and business rules
 
 Protected requests require `Authorization: Bearer <access-token>`. Roles are

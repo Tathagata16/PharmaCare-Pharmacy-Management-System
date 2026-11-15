@@ -68,7 +68,12 @@ export async function listUsers({ page, limit }) {
       .lean(),
     User.countDocuments(),
   ])
-  return { users, total, page, limit }
+  return {
+    users: users.map((user) => ({ ...user, id: user._id.toString() })),
+    total,
+    page,
+    limit,
+  }
 }
 
 export async function updateUserRole(userId, role) {
