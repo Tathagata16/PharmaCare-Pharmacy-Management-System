@@ -21,7 +21,7 @@ listed; it does not certify production readiness.
 
 | Requirement | Current evidence/status | Final action |
 | --- | --- | --- |
-| GitHub repository URL | `https://github.com/sourodip19/PharmaCare-Pharmacy-Management-System` | Confirm repository visibility and access for assessors |
+| GitHub repository URL | `https://github.com/Tathagata16/PharmaCare-Pharmacy-Management-System` | Confirm repository visibility and access for assessors |
 | Primary branch | `main` | Confirm all final work is pushed to the intended branch |
 | Final commit ID | Current inspected base revision: `28bc4f12699630e70d76f6f9b6a4027f3f1b093f`; documentation files in this submission batch are not yet committed | Update this field after all final documentation is committed and pushed |
 | Demo URL / local-only declaration | **No public deployment is configured or verified.** Local development uses a Vite client (normally `http://localhost:5173`) and API (`http://localhost:5001`). | Declare local-only unless a public deployment is actually tested; do not present localhost as a public demo URL |
@@ -34,7 +34,6 @@ listed; it does not certify production readiness.
 | Deployment guide | `docs/DEPLOYMENT-GUIDE.md` | Do not claim production deployment unless verified |
 | Walkthrough video | **TODO — no video is included** | Record a short demo using non-sensitive test data; cover each role and key flows |
 | AI attribution | `docs/AI-ATTRIBUTION.md` | Candidate must verify tools, complete statement, and comply with organization policy |
-| Demo credentials | **TODO — no credentials are documented or embedded** | Create temporary least-privilege demo accounts privately; share credentials only via an approved secure channel, never in the repository |
 | Known limitations | README, technical report, test report, user guide | Review and disclose limitations during the demonstration |
 | Candidate name / registration number | Placeholders in technical report | Complete before submission |
 | License / external asset attribution | Root project license not present; `hero.png` source is unverified | Obtain owner approval for a source license and verify/replace/attribute the asset |
