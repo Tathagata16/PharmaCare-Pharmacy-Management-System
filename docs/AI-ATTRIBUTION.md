@@ -107,18 +107,4 @@ add a project license only after authorization from the project owner.
   illustrations, fonts, datasets, or copied external materials included by
   the project owner.
 
-## 6. Candidate-specific attribution statement
 
-> **Candidate statement — review and complete before submission:** I used
-> [list actual AI tools and purposes, or state “No additional AI tools”].
-> My review covered [PLACEHOLDER — describe candidate's review]; tests I
-> personally ran were [PLACEHOLDER — list commands/results or state none].
-> I am responsible for the final work, the accuracy of my submission, and
-> compliance with the organization's AI and attribution policy.
-
-Candidate name: **[PLACEHOLDER]**
-
-Date: **[PLACEHOLDER]**
-
-Organization policy/reference: **[PLACEHOLDER — confirm Algions AI Labs
-Private Limited requirements]**
