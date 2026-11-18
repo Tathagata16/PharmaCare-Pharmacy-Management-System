@@ -380,7 +380,7 @@ their own package manifests.
 ## Clone and install
 
 ```sh
-git clone https://github.com/sourodip19/PharmaCare-Pharmacy-Management-System.git
+git clone https://github.com/Tathagata16/PharmaCare-Pharmacy-Management-System.git
 cd PharmaCare-Pharmacy-Management-System
 
 cp server/.env.example server/.env
