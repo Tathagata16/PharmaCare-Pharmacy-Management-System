@@ -10,10 +10,10 @@
 | --- | --- |
 | Project title | **PharmaCare — Pharmacy Management System** |
 | Organization | **Algions AI Labs Private Limited** |
-| Internship role | **Full-Stack Web Development** |
-| Candidate name | **[PLACEHOLDER — enter candidate name]** |
-| Registration number | **[PLACEHOLDER — enter registration number]** |
-| Project repository | `sourodip19/PharmaCare-Pharmacy-Management-System` |
+| Internship role | **Fullstack Web Developer** |
+| Candidate name | **Tathagata Ghosh** |
+| Registration number | **12301189** |
+| Project repository | `Tathagata16/PharmaCare-Pharmacy-Management-System` |
 | Report status | Technical report based on the implemented source code |
 
 ---
