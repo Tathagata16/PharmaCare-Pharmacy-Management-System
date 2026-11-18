@@ -652,11 +652,11 @@ require attribution under the project’s chosen submission/license policy.
 | Field | Information |
 | --- | --- |
 | Project | PharmaCare — Pharmacy Management System |
-| Repository | [`sourodip19/PharmaCare-Pharmacy-Management-System`](https://github.com/sourodip19/PharmaCare-Pharmacy-Management-System) |
-| Author | TODO — add preferred author name |
-| Institution / course | TODO — add if relevant to the internship assessment |
-| Project period | TODO — add dates |
-| License | TODO — choose and add a repository `LICENSE` file; no root license file is currently present |
+| Repository | [`Tathagata16/PharmaCare-Pharmacy-Management-System`](https://github.com/Tathagata16/PharmaCare-Pharmacy-Management-System) |
+| Author | Tathagata Ghosh |
+| Institution / course | Algions AI Labs|
+| Project period | 12-11-2026 to 15-11-2026 |
+| License | NA|
 
 For design details and additional discussion, see
 [`docs/TECHNICAL-REPORT.md`](./docs/TECHNICAL-REPORT.md).
